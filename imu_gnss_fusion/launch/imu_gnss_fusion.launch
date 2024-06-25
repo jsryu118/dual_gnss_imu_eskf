@@ -1,0 +1,31 @@
+<launch>
+    <param name="acc_noise"        type="double" value="1e-2" />
+    <param name="gyr_noise"        type="double" value="1e-4" />
+    <param name="acc_bias_noise"   type="double" value="1e-6" />
+    <param name="gyr_bias_noise"   type="double" value="1e-8" />
+
+    <param name="gps_x_imuFrame"   type="double" value="0" />
+    <param name="gps_y_imuFrame"   type="double" value="0" />
+    <param name="gps_z_imuFrame"   type="double" value="0" />
+
+    <param name="acc_std_threshold" type="double" value="3" />
+
+    <param name="local_long"       type="double" value="35.5753936" />
+    <param name="local_lat"        type="double" value="129.1906688" />
+    <param name="local_alt"        type="double" value="63.091" />
+
+    <param name="frame_id"         type="string" value="map" />
+    <param name="pub_tf"           type="bool" value="false" />
+    <param name="child_frame_id"   type="string" value="base_link" />
+    <param name="topic_imu"         type="string" value="/imu/data" />
+    <param name="topic_gps"         type="string" value="/gnss_1/llh_position" />
+
+    <param name="viz_path"         type="bool" value="true" />
+    <!-- <node name="nmea_topic_driver" pkg="nmea_navsat_driver" type="nmea_topic_driver" output="screen" /> -->
+    
+    <node name="imu_gnss_fusion_node" pkg="imu_gnss_fusion" type="imu_gnss_fusion_node" output="screen"/>
+
+    <node pkg="rviz" type="rviz" name="rviz" output="screen" 
+      args="-d $(find imu_gnss_fusion)/rviz/default.rviz" required="true">
+    </node>
+</launch>
