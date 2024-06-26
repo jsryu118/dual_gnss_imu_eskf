@@ -13,9 +13,9 @@ constexpr int kNoiseDim = 12;
 
 //TODORYU
 // Ulsan UNIST 3dmgq7
-constexpr double kG = 9.78662;
+// constexpr double kG = 9.78662;
 // Daegu PG 3dmgq7
-// constexpr double kG = 9.81007;
+constexpr double kG = 9.81007;
 
 using MatrixSD = Eigen::Matrix<double, kStateDim, kStateDim>;
 
@@ -63,7 +63,7 @@ class KF {
 
         const double kDegreeToRadian = M_PI / 180.;
         const double sigma_rp = 10. * kDegreeToRadian;
-        const double sigma_yaw = 100. * kDegreeToRadian;
+        const double sigma_yaw = 10. * kDegreeToRadian;
 
         state_ptr_->cov.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * 100.;                 // position std: 10 m
         state_ptr_->cov.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity() * 100.;                 // velocity std: 10 m/s
