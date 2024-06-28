@@ -22,6 +22,7 @@ class FusionNode {
         double gps_b_x_imuFrame, gps_b_y_imuFrame, gps_b_z_imuFrame;
         double local_long, local_lat, local_alt;
         
+
         nh.param("acc_noise", acc_n, 1e-2);
         nh.param("gyr_noise", gyr_n, 1e-4);
         nh.param("acc_bias_noise", acc_w, 1e-6);
@@ -71,15 +72,9 @@ class FusionNode {
 
         path_pub_ = nh.advertise<nav_msgs::Path>("nav_path", 10);
         odom_pub_ = nh.advertise<nav_msgs::Odometry>("nav_odom", 10);
-
-        // log files
-        // file_gps_.open("fusion_gps.csv");
-        // file_state_.open("fusion_state.csv");
     }
 
     ~FusionNode() {
-        // file_gps_.close();
-        // file_state_.close();
     }
 
     void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg);
@@ -147,16 +142,20 @@ void FusionNode::imu_callback(const sensor_msgs::ImuConstPtr &imu_msg) {
     if (!initialized_gps_) {
         imu_buf_.push_back(imu_data_ptr);
         if (imu_buf_.size() > kImuBufSize) imu_buf_.pop_front();
+        last_imu_ptr_ = imu_data_ptr;
         // return;
     }
     if (!initialized_heading_) {
         if (gps_f_buf_.size() > kGPSBufSize-1 && gps_b_buf_.size() > kGPSBufSize-1 ){
             initialize_heading();
+            last_imu_ptr_ = imu_data_ptr;
         }
     }
 
     if (initialized_gps_ && initialized_heading_){
+        // std::cout << kf_ptr_->state_ptr_->v_GI[1] << std::endl;
         kf_ptr_->predict(last_imu_ptr_, imu_data_ptr);
+        // std::cout << kf_ptr_->state_ptr_->v_GI[1] << std::endl;
         last_imu_ptr_ = imu_data_ptr;
         publish_save_state();
     }
@@ -305,9 +304,8 @@ void FusionNode::gps_process(const GpsDataPtr gps_data_ptr, const Eigen::Vector3
     const Eigen::Matrix3d &r_GI = kf_ptr_->state_ptr_->r_GI;
 
     // residual
-    Eigen::Vector3d residual = p_G_Gps - (p_GI + r_GI * I_p_Gps_);
+    Eigen::Vector3d residual = (p_G_Gps - r_GI * I_p_Gps_) - p_GI;
     double abs_residual = residual.norm();
-    std::cout << abs_residual << std::endl;
 
     // jacobian
     Eigen::Matrix<double, 3, 15> H;
@@ -321,12 +319,6 @@ void FusionNode::gps_process(const GpsDataPtr gps_data_ptr, const Eigen::Vector3
     kf_ptr_->update_measurement(H, V, residual);
 
     if (!initialized_gps_)  initialized_gps_ = true;
-
-    // save gps lla
-    // file_gps_ << std::fixed << std::setprecision(15)
-    //           << gps_data_ptr->timestamp << ", "
-    //           << gps_data_ptr->lla[0] << ", " << gps_data_ptr->lla[1] << ", " << gps_data_ptr->lla[2]
-    //           << std::endl;
 }
 
 bool FusionNode::init_rot_from_imudata(Eigen::Matrix3d &r_GI) {
@@ -358,19 +350,20 @@ bool FusionNode::init_rot_from_imudata(Eigen::Matrix3d &r_GI) {
     Eigen::Matrix3d r_GI_;
     const Eigen::Vector3d &mean_acc_norm = mean_acc.normalized();
     const Eigen::Vector3d &initial_heading_enu_norm = initial_heading_enu.normalized();
-    
+    Eigen::Vector3d z_axis = mean_acc_norm;
+
     // x-axis
-    Eigen::Vector3d x_axis = Eigen::Vector3d::UnitX() - mean_acc_norm * mean_acc_norm.transpose() * Eigen::Vector3d::UnitX();
+    Eigen::Vector3d x_axis = Eigen::Vector3d::UnitX() - z_axis * z_axis.transpose() * Eigen::Vector3d::UnitX();
     x_axis.normalize();
 
     // y-axis
-    Eigen::Vector3d y_axis = mean_acc_norm.cross(x_axis);
+    Eigen::Vector3d y_axis = z_axis.cross(x_axis);
     y_axis.normalize();
 
     Eigen::Matrix3d r_IG;
     r_IG.block<3, 1>(0, 0) = x_axis;
     r_IG.block<3, 1>(0, 1) = y_axis;
-    r_IG.block<3, 1>(0, 2) = mean_acc_norm;
+    r_IG.block<3, 1>(0, 2) = z_axis;
 
     r_GI = r_IG.transpose();
 
@@ -392,6 +385,22 @@ bool FusionNode::init_rot_from_imudata(Eigen::Matrix3d &r_GI) {
 
     // r_GI에 회전 행렬 곱하기
     r_GI = rotation_matrix * r_GI;
+
+    r_IG = r_GI.transpose();
+    r_IG.block<3, 1>(0, 2) = z_axis;
+    // x-axis
+    x_axis = r_IG.block<3, 1>(0, 0)- z_axis * z_axis.transpose() * r_IG.block<3, 1>(0, 0);
+    x_axis.normalize();
+
+    // y-axis
+    y_axis = z_axis.cross(x_axis);
+    y_axis.normalize();
+
+    r_IG.block<3, 1>(0, 0) = x_axis;
+    r_IG.block<3, 1>(0, 1) = y_axis;
+    r_IG.block<3, 1>(0, 2) = z_axis;
+    r_GI = r_IG.transpose();
+
     return true;
     
 }
@@ -443,18 +452,6 @@ void FusionNode::publish_save_state() {
         nav_path_.poses.push_back(pose_stamped);
         path_pub_.publish(nav_path_);
     }
-
-    // save state p q lla
-    // std::shared_ptr<KF::State> kf_state(kf_ptr_->state_ptr_);
-    // Eigen::Vector3d lla;
-    // ryu::enu2lla(init_lla_, kf_state->p_GI, &lla);  // convert ENU state to lla
-    // const Eigen::Quaterniond q_GI(kf_state->r_GI);
-    // file_state_ << std::fixed << std::setprecision(15)
-    //             << kf_state->timestamp << ", "
-    //             << kf_state->p_GI[0] << ", " << kf_state->p_GI[1] << ", " << kf_state->p_GI[2] << ", "
-    //             << q_GI.x() << ", " << q_GI.y() << ", " << q_GI.z() << ", " << q_GI.w() << ", "
-    //             << lla[0] << ", " << lla[1] << ", " << lla[2]
-    //             << std::endl;
 }
 
 }  // namespace ryu

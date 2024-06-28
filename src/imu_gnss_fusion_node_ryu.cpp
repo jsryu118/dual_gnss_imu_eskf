@@ -185,8 +185,6 @@ void FusionNode::gps_callback(const sensor_msgs::NavSatFixConstPtr &gps_msg) {
     // residual
     Eigen::Vector3d residual = p_G_Gps - (p_GI + r_GI * I_p_Gps_);
     double abs_residual = residual.norm();
-    std::cout << abs_residual << std::endl;
-
     // jacobian
     Eigen::Matrix<double, 3, 15> H;
     H.setZero();

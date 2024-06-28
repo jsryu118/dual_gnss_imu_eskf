@@ -1,0 +1,27 @@
+topic_imu             : /imu/data
+acc_noise             : 0.01
+gyr_noise             : 0.0001
+acc_bias_noise        : 0.000001
+gyr_bias_noise        : 0.00000001
+
+topic_gps_front       : /gnss_2/llh_position
+gps_f_x_imuFrame      : 1.47
+gps_f_y_imuFrame      : 0.0
+gps_f_z_imuFrame      : 0.0
+topic_gps_behind      : /gnss_1/llh_position
+gps_b_x_imuFrame      : 0.0
+gps_b_y_imuFrame      : 0.0
+gps_b_z_imuFrame      : 0.0
+
+acc_std_threshold     : 3.0
+heading_std_threshold : 3.0
+delta_gps_threshold   : 0.01
+
+# UNIST
+local_long            : 35.571127
+local_lat             : 129.1874088
+local_alt             : 76.716
+# Daugu PG
+# local_long            : 35.6475476
+# local_lat             : 128.4026479
+# local_alt             : 48.827
