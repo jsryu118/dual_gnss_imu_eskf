@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>imu_gnss_fusion</name>
+  <name>gnss_imu_eskf</name>
   <version>0.0.0</version>
-  <description>The imu_gnss_fusion package</description>
+  <description>The gnss_imu_eskf package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

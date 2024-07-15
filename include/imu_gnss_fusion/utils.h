@@ -14,14 +14,14 @@ struct ImuData {
 using ImuDataPtr = std::shared_ptr<ImuData>;
 using ImuDataConstPtr = std::shared_ptr<const ImuData>;
 
-struct GpsData {
+struct gnssData {
     double timestamp;
 
     Eigen::Vector3d lla;  // Latitude in degree, longitude in degree, and altitude in meter
     Eigen::Matrix3d cov;  // Covariance in m^2
 };
-using GpsDataPtr = std::shared_ptr<GpsData>;
-using GpsDataConstPtr = std::shared_ptr<const GpsData>;
+using gnssDataPtr = std::shared_ptr<gnssData>;
+using gnssDataConstPtr = std::shared_ptr<const gnssData>;
 
 inline Eigen::Matrix3d skew_matrix(const Eigen::Vector3d& v) {
     Eigen::Matrix3d w;

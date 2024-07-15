@@ -30,6 +30,7 @@ class KF {
         // nominal-state
         Eigen::Vector3d p_GI;
         Eigen::Vector3d v_GI;
+        Eigen::Vector3d av_GI;
         Eigen::Matrix3d r_GI;
         Eigen::Vector3d acc_bias;
         Eigen::Vector3d gyr_bias;
@@ -82,7 +83,8 @@ class KF {
     void predict(ImuDataConstPtr last_imu, ImuDataConstPtr curr_imu) {
         const double dt = curr_imu->timestamp - last_imu->timestamp;
         
-
+        // std::cout <<"!!!!!!!!!!!!!!!!!!!"<< std::endl;
+        // std::cout <<dt<< std::endl;
         const double dt2 = dt * dt;
 
         State last_state = *state_ptr_;
@@ -98,12 +100,13 @@ class KF {
         const Eigen::Vector3d acc_unbias = 0.5 * (last_imu->acc + curr_imu->acc) - last_state.acc_bias;
         const Eigen::Vector3d gyr_unbias = 0.5 * (last_imu->gyr + curr_imu->gyr) - last_state.gyr_bias;
 
-        // std::cout <<acc_unbias[1]<< std::endl;
+        // std::cout <<acc_unbias<< std::endl;
         const Eigen::Vector3d acc_nominal = last_state.r_GI * acc_unbias + Eigen::Vector3d(0, 0, -kG);    
-        std::cout <<"!!!!!!!!!!!!!!!!!!!"<< std::endl;
-        std::cout <<acc_nominal[1]<< std::endl;
+        // std::cout <<"!!!!!!!!!!!!!!!!!!!"<< std::endl;
+        // std::cout <<last_state.r_GI * acc_unbias    << std::endl;
         state_ptr_->p_GI = last_state.p_GI + last_state.v_GI * dt + 0.5 * acc_nominal * dt2;
         state_ptr_->v_GI = last_state.v_GI + acc_nominal * dt;
+        // std::cout <<state_ptr_->v_GI[2]<< std::endl;
         const Eigen::Vector3d delta_angle_axis = gyr_unbias * dt;
         double norm_delta_angle = delta_angle_axis.norm();
         Eigen::Matrix3d dR = Eigen::Matrix3d::Identity();
@@ -111,7 +114,7 @@ class KF {
             dR = Eigen::AngleAxisd(norm_delta_angle, delta_angle_axis.normalized()).toRotationMatrix();
             state_ptr_->r_GI = last_state.r_GI * dR;
         }
-
+        state_ptr_->av_GI = gyr_unbias; 
         //
         // ESKF 5.4.3 The error-state Jacobian and perturbation matrices
         //
