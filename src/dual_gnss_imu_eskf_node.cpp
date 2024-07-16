@@ -8,6 +8,7 @@
 #include <Eigen/Core>
 #include <deque>
 #include <fstream>
+#include <chrono>
 #include <iostream>
 #include <tf/transform_broadcaster.h>
 #include "imu_gnss_fusion/kf.h"
@@ -23,7 +24,7 @@ class FusionNode {
         nh.param("local_long", local_long, 35.571127);
         nh.param("local_lat", local_lat, 129.1874088);
         nh.param("local_alt", local_alt, 76.716);
-        init_lla_ = Eigen::Vector3d(local_long, local_lat, local_alt);
+        origin_enu_ = Eigen::Vector3d(local_long, local_lat, local_alt);
 
         std::string topic_gnss_front, topic_gnss_behind;
         double gnss_f_x_imuFrame, gnss_f_y_imuFrame, gnss_f_z_imuFrame;
@@ -49,6 +50,8 @@ class FusionNode {
         nh.param("acc_bias_noise", acc_w, 1e-6);
         nh.param("gyr_bias_noise", gyr_w, 1e-8);
 
+        ////////////////// KF ///////////////////////  
+        kf_ptr_ = std::make_unique<KF>(acc_n, gyr_n, acc_w, gyr_w);
 
         ///////////////INITIALIZATION////////////////
         nh.param("GnssBufSize", kGnssBufSize, 5);
@@ -57,7 +60,10 @@ class FusionNode {
         nh.param("heading_std_threshold", heading_std_threshold, 3.);
         nh.param("delta_gnss_threshold", delta_gnss_threshold, 0.05);
         nh.param("time_sync_threshold", time_sync_threshold, 0.05);
+
         //////////////////ODOMETRY///////////////////////  
+        std::string topic_odometry;
+        nh.param<std::string>("topic_odometry", topic_odometry, "/eskf/odom");
         double baes_link_x_imuFrame, baes_link_y_imuFrame, baes_link_z_imuFrame,
                 baes_link_qx_imuFrame, baes_link_qy_imuFrame, baes_link_qz_imuFrame, baes_link_qw_imuFrame;
         nh.param("baes_link_x_imuFrame", baes_link_x_imuFrame, 0.);
@@ -72,33 +78,23 @@ class FusionNode {
         Eigen::Vector3d translation_vector(baes_link_x_imuFrame, baes_link_y_imuFrame, baes_link_z_imuFrame);
         t_imu_2_baselink = translation_vector;
 
-
-
-
-
+        ////////////////// TF ///////////////////////  
         nh.param("pub_tf", pub_tf, false);
         nh.param<std::string>("frame_id", frame_id, "map");
-        nh.param<std::string>("child_frame_id", child_frame_id, "gnss_frame");
+        nh.param<std::string>("child_frame_id", child_frame_id, "base_link");
 
+        ////////////////// OTHERS ///////////////////////      
+        std::string topic_path;
+        nh.param<std::string>("topic_path", topic_path, "/eskf_path");
+        nh.param("pub_path", pub_path, false);
 
-
-
-
-        kf_ptr_ = std::make_unique<KF>(acc_n, gyr_n, acc_w, gyr_w);
-
-
-        nh.param("viz_path", viz_path, false);
-
-        // ROS sub & pub
+        ////////////////// ROS Sub && Pub///////////////////////  
         imu_sub_ = nh.subscribe(topic_imu, 10, &FusionNode::imu_callback, this);
         gnss_f_sub_ = nh.subscribe(topic_gnss_front, 10, &FusionNode::gnss_f_callback, this);
         gnss_b_sub_ = nh.subscribe(topic_gnss_behind, 10, &FusionNode::gnss_b_callback, this);
 
-        path_pub_ = nh.advertise<nav_msgs::Path>("nav_path", 10);
-        odom_pub_ = nh.advertise<nav_msgs::Odometry>("nav_odom", 10);
-        // pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("current_pose", 10);
-        // vel_pub_ = nh.advertise<geometry_msgs::TwistStamped >("current_velocity", 10);
-
+        path_pub_ = nh.advertise<nav_msgs::Path>(topic_path, 10);
+        odom_pub_ = nh.advertise<nav_msgs::Odometry>(topic_odometry, 10);
     }
 
     ~FusionNode() {
@@ -118,8 +114,7 @@ class FusionNode {
     ros::Subscriber gnss_b_sub_;
     ros::Publisher path_pub_;
     ros::Publisher odom_pub_;
-    // ros::Publisher pose_pub_;
-    // ros::Publisher vel_pub_;
+
     tf::TransformBroadcaster tf_broadcaster_;
 
     nav_msgs::Path nav_path_;
@@ -132,7 +127,7 @@ class FusionNode {
     double heading_std_threshold;
     double delta_gnss_threshold;
     double time_sync_threshold;
-    bool viz_path;
+    bool pub_path;
 
     // init
     bool initialized_rot_ = false;
@@ -144,7 +139,7 @@ class FusionNode {
     std::deque<gnssDataConstPtr> gnss_f_buf_;
     std::deque<gnssDataConstPtr> gnss_b_buf_;
     ImuDataConstPtr last_imu_ptr_;
-    Eigen::Vector3d init_lla_;
+    Eigen::Vector3d origin_enu_;
     Eigen::Vector3d I_p_gnss_f_;
     Eigen::Vector3d I_p_gnss_b_;
     Eigen::Vector3d initial_heading_enu;
@@ -211,13 +206,13 @@ void FusionNode::initialize_heading() {
 
     for (const auto gnss_f : gnss_f_buf_) {
         Eigen::Vector3d gnss_f_enu; // position of gnss from global(map) frame
-        ryu::lla2enu(init_lla_, gnss_f->lla, &gnss_f_enu);
+        ryu::lla2enu(origin_enu_, gnss_f->lla, &gnss_f_enu);
         sum_front += gnss_f_enu;
         gnss_f_enu_vec.push_back(gnss_f_enu);
     }
     for (const auto gnss_b : gnss_b_buf_) {
         Eigen::Vector3d gnss_b_enu; // position of gnss from global(map) frame
-        ryu::lla2enu(init_lla_, gnss_b->lla, &gnss_b_enu);
+        ryu::lla2enu(origin_enu_, gnss_b->lla, &gnss_b_enu);
         sum_behind += gnss_b_enu;
         gnss_b_enu_vec.push_back(gnss_b_enu);
     }
@@ -325,7 +320,7 @@ void FusionNode::gnss_process(const gnssDataPtr gnss_data_ptr, const Eigen::Vect
 
         if (!init_rot_from_imudata(kf_ptr_->state_ptr_->r_GI)) return;
 
-        // init_lla_ = gnss_data_ptr->lla;
+        // origin_enu_ = gnss_data_ptr->lla;
 
         initialized_rot_ = true;
 
@@ -336,7 +331,7 @@ void FusionNode::gnss_process(const gnssDataPtr gnss_data_ptr, const Eigen::Vect
 
     // convert WGS84 to ENU frame
     Eigen::Vector3d p_G_gnss; // position of gnss from global(map) frame
-    ryu::lla2enu(init_lla_, gnss_data_ptr->lla, &p_G_gnss);
+    ryu::lla2enu(origin_enu_, gnss_data_ptr->lla, &p_G_gnss);
 
     const Eigen::Vector3d &p_GI = kf_ptr_->state_ptr_->p_GI;
     const Eigen::Matrix3d &r_GI = kf_ptr_->state_ptr_->r_GI;
@@ -521,7 +516,7 @@ void FusionNode::publish_save_state() {
     }
 
     // publish the path
-    if (viz_path){
+    if (pub_path){
         geometry_msgs::PoseStamped pose_stamped;
         pose_stamped.header = odom_msg.header;
         pose_stamped.pose = odom_msg.pose.pose;

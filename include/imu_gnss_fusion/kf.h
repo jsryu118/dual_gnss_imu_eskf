@@ -13,9 +13,9 @@ constexpr int kNoiseDim = 12;
 
 //TODORYU
 // Ulsan UNIST 3dmgq7
-// constexpr double kG = 9.78662;
+constexpr double kG = 9.78662;
 // Daegu PG 3dmgq7
-constexpr double kG = 9.81007;
+// constexpr double kG = 9.81007;
 
 using MatrixSD = Eigen::Matrix<double, kStateDim, kStateDim>;
 
@@ -82,9 +82,7 @@ class KF {
      */
     void predict(ImuDataConstPtr last_imu, ImuDataConstPtr curr_imu) {
         const double dt = curr_imu->timestamp - last_imu->timestamp;
-        
-        // std::cout <<"!!!!!!!!!!!!!!!!!!!"<< std::endl;
-        // std::cout <<dt<< std::endl;
+
         const double dt2 = dt * dt;
 
         State last_state = *state_ptr_;

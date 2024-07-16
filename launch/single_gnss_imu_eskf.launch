@@ -9,6 +9,6 @@
   <node name="single_gnss_imu_eskf_node" pkg="gnss_imu_eskf" type="single_gnss_imu_eskf_node" output="screen"/>
 
   <!-- <node pkg="rviz" type="rviz" name="rviz" output="screen" 
-    args="-d $(find imu_gnss_fusion)/rviz/default.rviz" required="true">
+    args="-d $(find gnss_imu_eskf)/rviz/default.rviz" required="true">
   </node> -->
 </launch> 
