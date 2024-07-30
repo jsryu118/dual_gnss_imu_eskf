@@ -1,0 +1,11 @@
+<launch> 
+  <rosparam file="$(find switching)/config/param.yaml" command="load"/>
+  <param name="log_path"     type="string" value="$(find switching)/log/odom_log.txt" />
+
+
+  <node name="switching_test_node" pkg="switching" type="switching_test_node" output="screen"/>
+
+  <node pkg="rviz" type="rviz" name="rviz" output="screen" 
+    args="-d $(find switching)/rviz/rviz.rviz" required="true">
+  </node>
+</launch>

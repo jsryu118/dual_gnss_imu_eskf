@@ -1,0 +1,15 @@
+topic_status      : /ekf/status
+topic_gq7         : /ekf/odometry_map
+topic_eskf        : /eskf/odom #/eskf/odom
+
+topic_pubodom     : /switching_result
+topic_pubpose     : /current_pose
+topic_pubvel      : /current_velocity
+
+# UNIST
+# pub_tf            : false
+frame_id          : map
+child_frame_id    : base_link
+
+pos_n             : 0.01
+vel_n             : 0.01

@@ -1,0 +1,6 @@
+<launch> 
+  <rosparam file="$(find switching)/config/param_dual.yaml" command="load"/>
+  <param name="log_path"     type="string" value="$(find switching)/log/odom_log.txt" />
+  <node name="switching_node" pkg="switching" type="switching_node" output="screen"/>
+
+</launch>
