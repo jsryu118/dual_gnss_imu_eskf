@@ -1,0 +1,9 @@
+# BASE POINT for ENU coordinate frame
+##### UNIST
+local_long              : 35.571127
+local_lat               : 129.1874088
+local_alt               : 76.716
+##### Daugu PG
+# local_long                : 35.6475476
+# local_lat                 : 128.4026479
+# local_alt                 : 48.827

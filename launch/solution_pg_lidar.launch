@@ -1,0 +1,16 @@
+<launch> 
+  <include file="$(find microstrain_inertial_examples)/launch/gq7_pg.launch"/>
+
+  <param name="use_lidar_odom"   type="bool" value="true" />
+  <param name="pub_tf"     type="bool" value="false" />
+  <!-- <include file="$(find switching)/launch/switching_test_kf.launch"/> -->
+  <include file="$(find switching)/launch/switching_kf.launch"/>
+
+  <rosparam file="$(find gnss_imu_eskf)/config/param_dual_pg.yaml" command="load"/>
+  <node name="dual_gnss_imu_eskf_node" pkg="gnss_imu_eskf" type="dual_gnss_imu_eskf_node" output="screen"/>
+
+  <!-- <node pkg="rviz" type="rviz" name="rviz" output="screen" 
+    args="-d $(find gnss_imu_eskf)/rviz/default.rviz" required="true">
+  </node> -->
+
+</launch> 
