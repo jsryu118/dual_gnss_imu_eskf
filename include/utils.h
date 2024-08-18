@@ -51,6 +51,7 @@ struct gnssData {
     double timestamp;
 
     Eigen::Vector3d lla;  // Latitude in degree, longitude in degree, and altitude in meter
+    Eigen::Vector3d xyz_enu;  // 
     Eigen::Matrix3d cov;  // Covariance in m^2
 };
 using gnssDataPtr = std::shared_ptr<gnssData>;
@@ -82,5 +83,21 @@ inline void enu2lla(const Eigen::Vector3d& init_lla,
     local_cartesian.Reverse(point_enu(0), point_enu(1), point_enu(2),
                             point_lla->data()[0], point_lla->data()[1], point_lla->data()[2]);
 }
+  static Eigen::Matrix4d quat_left_matrix(const Eigen::Quaterniond &q) {
+    Eigen::Matrix4d m4 = Eigen::Matrix4d::Zero();
+    m4.block<3, 1>(1, 0) = q.vec();
+    m4.block<1, 3>(0, 1) = -q.vec();
+    m4.block<3, 3>(1, 1) = skew_matrix(q.vec());
+    m4 += Eigen::Matrix4d::Identity() * q.w();
+    return m4;
+  }
 
+  static Eigen::Matrix4d quat_right_matrix(const Eigen::Quaterniond &q) {
+    Eigen::Matrix4d m4 = Eigen::Matrix4d::Zero();
+    m4.block<3, 1>(1, 0) = q.vec();
+    m4.block<1, 3>(0, 1) = -q.vec();
+    m4.block<3, 3>(1, 1) = -skew_matrix(q.vec());
+    m4 += Eigen::Matrix4d::Identity() * q.w();
+    return m4;
+  }
 }  // namespace ryu

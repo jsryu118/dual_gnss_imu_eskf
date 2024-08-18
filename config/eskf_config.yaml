@@ -1,0 +1,56 @@
+###################### ESKF ######################
+consider_delay              : true                     # delay between imu and gnss
+kDelayImuBufSize            : 20                       # if consider_delay = true, if gnss_delay_time compared to imu is 0.2sec, DelayImuBufSize is 20 = 0.2sec x 100hz IMU
+use_dual_gnss               : true
+dual_gnss_mode              : 6DOF_update              # if use_dual_gnss = true, only_initialization or 6DOF_update
+
+###################### GNSS ######################
+topic_gnss_main             : /gnss_2/llh_position
+gnss_main_x_imuFrame        : 0.0
+gnss_main_y_imuFrame        : 0.04
+gnss_main_z_imuFrame        : 0.74
+topic_gnss_sub              : /gnss_1/llh_position
+gnss_sub_x_imuFrame         : 1.47
+gnss_sub_y_imuFrame         : 0.04
+gnss_sub_z_imuFrame         : 0.74
+
+
+
+###################### IMU #######################
+topic_imu                   : /imu/data
+acc_noise                   : 0.01
+gyr_noise                   : 0.0001
+acc_bias_noise              : 0.000001
+gyr_bias_noise              : 0.00000001
+
+###################### INITIALIZATION ######################
+kInitImuBufSize             : 100   # (Hz x sec)  eg. 100Hz x 1sec
+kInitGnssBufSize            : 5     # (Hz x sec)  eg. 2hz   x 2.5secs
+kAccStdThreshold            : 0.1
+kGnssPosStdThreshold        : 0.1
+kGnssPosDiffThreshold       : 0.05
+kTimeSyncThreshold          : 0.05
+
+###################### ODOMETRY ######################
+topic_odometry              : /eskf/odom2
+# transformation for base_link 
+baes_link_x_imuFrame        : 0.0
+baes_link_y_imuFrame        : 0.0
+baes_link_z_imuFrame        : 0.0
+baes_link_qx_imuFrame       : 0.0
+baes_link_qy_imuFrame       : 0.0
+baes_link_qz_imuFrame       : 0.0
+baes_link_qw_imuFrame       : 1.0
+
+###################### TF ######################
+pub_tf                      : true
+frame_id                    : map_gnss
+child_frame_id              : base_link
+
+###################### OTHERS ######################
+topic_path                  : /eskf/path
+pub_path                    : false
+
+
+
+
